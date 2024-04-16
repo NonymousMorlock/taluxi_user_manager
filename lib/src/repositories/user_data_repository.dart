@@ -1,6 +1,4 @@
-import 'package:meta/meta.dart';
-
-import '../firebase_gateways/firebase_user_data_repository.dart';
+import 'package:user_manager/src/firebase_gateways/firebase_user_data_repository.dart';
 
 abstract class UserDataRepository {
   /// The UserDataRepository singleton
@@ -41,57 +39,57 @@ abstract class UserDataRepository {
     'A': _TrophyModel(
       minRideCount: 5,
       name: '5 trajets depuis votre inscription',
-      timeLimit:
-          DateTime.now().add(Duration(days: 1)).difference(DateTime.now()),
+      timeLimit: DateTime.now()
+          .add(const Duration(days: 1))
+          .difference(DateTime.now()),
     ),
-    'B': _TrophyModel(
+    'B': const _TrophyModel(
       minRideCount: 3,
       name: '3 trajets en une journée',
       timeLimit: Duration(days: 1),
     ),
-    'C': _TrophyModel(
+    'C': const _TrophyModel(
       timeLimit: Duration(days: 4),
       name: '15 trajets en 4 jours',
       minRideCount: 15,
     ),
-    'D': _TrophyModel(
+    'D': const _TrophyModel(
       timeLimit: Duration(days: 5),
       name: '28 trajets en 5 jours',
       minRideCount: 28,
     ),
-    'E': _TrophyModel(
+    'E': const _TrophyModel(
       timeLimit: Duration(days: 1),
       name: '8 trajets en une journée',
       minRideCount: 8,
     ),
-    'F': _TrophyModel(
+    'F': const _TrophyModel(
       timeLimit: Duration(days: 7),
       name: '45 trajets en une semaine',
       minRideCount: 45,
     ),
-    'G': _TrophyModel(
+    'G': const _TrophyModel(
       timeLimit: Duration(days: 7),
       minRideCount: 70,
       name: '70 trajets en une semaine',
     ),
-    'H': _TrophyModel(
+    'H': const _TrophyModel(
       timeLimit: Duration(days: 365),
       minRideCount: 600,
       name: '600 trajets depuis votre inscription',
-    )
+    ),
   };
 }
 
-// TODO document and rename variables.
+// TODOdocument and rename variables.
 
 class _TrophyModel {
-  final int minRideCount;
-  final String name;
-  final Duration timeLimit;
-
   const _TrophyModel({
     required this.minRideCount,
     required this.timeLimit,
     required this.name,
   });
+  final int minRideCount;
+  final String name;
+  final Duration timeLimit;
 }

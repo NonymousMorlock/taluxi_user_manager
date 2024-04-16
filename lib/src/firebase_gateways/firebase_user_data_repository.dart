@@ -4,12 +4,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../exceptions/user_data_access_exception.dart';
-import '../repositories/user_data_repository.dart';
-import '../utils/helpers.dart';
+import 'package:user_manager/src/exceptions/user_data_access_exception.dart';
+import 'package:user_manager/src/repositories/user_data_repository.dart';
+import 'package:user_manager/src/utils/helpers.dart';
 
-// TODO refactor : new classes (CacheDataManager).
+// TODOrefactor : new classes (CacheDataManager):.
 class FirebaseUserDataRepository implements UserDataRepository {
+  factory FirebaseUserDataRepository() => _singleton;
+
+  FirebaseUserDataRepository._internal()
+      : _firebaseFirestore = FirebaseFirestore.instance {
+    SharedPreferences.getInstance().then((value) => _sharedPreferences = value);
+    _setupFirestore();
+  }
+
+  @visibleForTesting
+  FirebaseUserDataRepository.forTest({
+    required FirebaseFirestore firestoreDatabase,
+    required SharedPreferences sharedPreferences,
+  })  : _firebaseFirestore = firestoreDatabase,
+        _sharedPreferences = sharedPreferences {
+    _setupFirestore();
+  }
   late SharedPreferences _sharedPreferences;
   late CollectionReference _additionalDataReference;
   late final FirebaseFirestore _firebaseFirestore;
@@ -27,27 +43,10 @@ class FirebaseUserDataRepository implements UserDataRepository {
   static final FirebaseUserDataRepository _singleton =
       FirebaseUserDataRepository._internal();
 
-  factory FirebaseUserDataRepository() => _singleton;
-
-  FirebaseUserDataRepository._internal()
-      : _firebaseFirestore = FirebaseFirestore.instance {
-    SharedPreferences.getInstance().then((value) => _sharedPreferences = value);
-    _setupFirestore();
-  }
-
-  @visibleForTesting
-  FirebaseUserDataRepository.forTest({
-    required FirebaseFirestore firestoreDatabase,
-    required SharedPreferences sharedPreferences,
-  })  : _firebaseFirestore = firestoreDatabase,
-        _sharedPreferences = sharedPreferences {
-    _setupFirestore();
-  }
-
   void _setupFirestore() {
     _additionalDataReference =
         _firebaseFirestore.collection(usersAdditionalDataKey);
-    _firebaseFirestore.settings = Settings(persistenceEnabled: false);
+    _firebaseFirestore.settings = const Settings(persistenceEnabled: false);
   }
 
   @override
@@ -69,9 +68,9 @@ class FirebaseUserDataRepository implements UserDataRepository {
         await _updateCacheData(documentData).catchError((_) => null);
         return documentData;
       }
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     } on FirebaseException {
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     }
   }
 
@@ -98,7 +97,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
       await _updateCacheData(initialAdditionalData).catchError((_) => null);
       await _additionalDataReference.doc(userUid).set(initialAdditionalData);
     } on FirebaseException {
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     }
   }
 
@@ -111,19 +110,19 @@ class FirebaseUserDataRepository implements UserDataRepository {
       await _updateCacheData(data).catchError((_) => null);
       await _additionalDataReference.doc(userUid).update(data);
     } on FirebaseException {
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     }
   }
 
   @override
   Future<void> incrementRideCount(String userId) async {
     try {
-      var additionalData = await getAdditionalData(userId);
+      final additionalData = await getAdditionalData(userId);
       additionalData[totalRideCountKey]++;
       await updateAdditionalData(data: additionalData, userUid: userId);
       await incrementTodaysRideCount();
     } on FirebaseException {
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     }
   }
 
@@ -138,7 +137,9 @@ class FirebaseUserDataRepository implements UserDataRepository {
       clearHistoryOlderThanOneMonth(rideCountHistory);
     }
     await _sharedPreferences.setString(
-        rideCountHistoryKey, json.encode(rideCountHistory));
+      rideCountHistoryKey,
+      json.encode(rideCountHistory),
+    );
   }
 
   @override
@@ -160,7 +161,8 @@ class FirebaseUserDataRepository implements UserDataRepository {
 
   @visibleForTesting
   void clearHistoryOlderThanOneMonth(
-      Map<String, dynamic> globalRideCountHistory) {
+    Map<String, dynamic> globalRideCountHistory,
+  ) {
     // TODO: optimize
     final todayDate = DateTime.now();
     globalRideCountHistory.removeWhere((historyDate, _) {
@@ -172,7 +174,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
   @override
   String getTheRecentlyWonTrophies(String userTrophies) {
     var trophiesWon = '';
-    var userRideCountSinceXDays;
+    int userRideCountSinceXDays;
     try {
       UserDataRepository.trophiesList.forEach((trophyLevel, trophy) async {
         userRideCountSinceXDays =
@@ -184,7 +186,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
       });
       return trophiesWon;
     } on FirebaseException {
-      throw UserDataAccessException.unknown();
+      throw const UserDataAccessException.unknown();
     }
   }
 
@@ -199,9 +201,9 @@ class FirebaseUserDataRepository implements UserDataRepository {
     //     _sharedPreferences.getString(rideCountHistoryKey);
     // final rideCountHistory = json.decode(rideCountHistoryJson);
     final rideCountHistory = getRideCountHistory();
-    var currentHistoryDate;
-    var currentHistoryKey;
-    int nonNullNumberOfDays = numberOfDays;
+    DateTime currentHistoryDate;
+    String currentHistoryKey;
+    var nonNullNumberOfDays = numberOfDays;
     while (nonNullNumberOfDays-- > 0) {
       currentHistoryDate =
           todaysDate.subtract(Duration(days: nonNullNumberOfDays));

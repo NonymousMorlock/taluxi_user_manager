@@ -1,20 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:flutter/foundation.dart';
-import '../repositories/user_data_repository.dart';
-import '../utils/helpers.dart';
-import '../entities/user.dart';
-
-import 'firebase_user_data_repository.dart';
+import 'package:user_manager/src/entities/user.dart';
+import 'package:user_manager/src/firebase_gateways/firebase_user_data_repository.dart';
+import 'package:user_manager/src/repositories/user_data_repository.dart';
+import 'package:user_manager/src/utils/helpers.dart';
 
 // TODO: Refactor (keys and ride count handling).
 class FirebaseUserInterface implements User {
-  final fb.User firebaseUser;
-  String? _trophies;
-  String? _trophiesCount;
-  String? _rideCount;
-  late UserDataRepository _userDataRepository;
-  String? _formattedName;
-  Map<String, dynamic>? _rideCountHistory;
   FirebaseUserInterface({
     required this.firebaseUser,
     required UserDataRepository userDataRepository,
@@ -23,6 +14,13 @@ class FirebaseUserInterface implements User {
     refreshAdditionalData();
     _formattedName = _getFormatedName();
   }
+  final fb.User firebaseUser;
+  String? _trophies;
+  String? _trophiesCount;
+  String? _rideCount;
+  late UserDataRepository _userDataRepository;
+  String? _formattedName;
+  Map<String, dynamic>? _rideCountHistory;
 
   @override
   String? get email => firebaseUser.email;
@@ -64,16 +62,16 @@ class FirebaseUserInterface implements User {
       FirebaseUserDataRepository.totalRideCountKey: 'Erreur',
       FirebaseUserDataRepository.trophiesKey: 'Erreur',
     };
-    var additionalData = await _userDataRepository
-        .getAdditionalData(uid).catchError((e) => errorData);
+    final additionalData = await _userDataRepository
+        .getAdditionalData(uid)
+        .catchError((e) => errorData);
     _trophies = additionalData[FirebaseUserDataRepository.trophiesKey];
     _rideCount =
         additionalData[FirebaseUserDataRepository.totalRideCountKey].toString();
-    if(_trophies == null) {
+    if (_trophies == null) {
       _trophiesCount = 0.toString();
-    }
-    else if (_trophies != 'Erreur') {
-      _trophiesCount = (trophies!.split('').length).toString();
+    } else if (_trophies != 'Erreur') {
+      _trophiesCount = trophies!.split('').length.toString();
     } else {
       _trophiesCount = 'Erreur';
     }
@@ -112,8 +110,9 @@ class FirebaseUserInterface implements User {
     final now = DateTime.now();
     return {
       generateKeyFromDateTime(now): "Aujourd'hui",
-      generateKeyFromDateTime(now.subtract(Duration(days: 1))): 'Hier',
-      generateKeyFromDateTime(now.subtract(Duration(days: 2))): 'Avant-hier'
+      generateKeyFromDateTime(now.subtract(const Duration(days: 1))): 'Hier',
+      generateKeyFromDateTime(now.subtract(const Duration(days: 2))):
+          'Avant-hier',
     };
   }
 }

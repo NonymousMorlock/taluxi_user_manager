@@ -3,24 +3,23 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mockito/mockito.dart';
 
-// TODO Complete mocks.
+// TODOComplete mocks.
 class MockFirebaseAuth extends Mock implements FirebaseAuth {
-  final stateChangedStreamController = StreamController<User>();
-  static User? _currentUser;
-  static bool mustThrowsException = false;
-  static String errorCode = '';
-  static var signInMethds = <String>[];
-
   MockFirebaseAuth({signedIn = false}) {
     if (signedIn) {
       signInWithCredential(
-        AuthCredential(
+        const AuthCredential(
           providerId: 'providerId',
           signInMethod: 'signInMethod',
         ),
       );
     }
   }
+  final stateChangedStreamController = StreamController<User>();
+  static User? _currentUser;
+  static bool mustThrowsException = false;
+  static String errorCode = '';
+  static List<String> signInMethds = <String>[];
 
   @override
   User? get currentUser {
@@ -83,18 +82,16 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {
 }
 
 class MockUserCredential extends Mock implements UserCredential {
-  final bool _isAnonymous;
-
   MockUserCredential({required bool isAnonymous}) : _isAnonymous = isAnonymous;
+  final bool _isAnonymous;
 
   @override
   User get user => MockUser(isAnonymous: _isAnonymous);
 }
 
 class MockUser extends Mock implements User {
-  final bool _isAnonymous;
-
   MockUser({required bool isAnonymous}) : _isAnonymous = isAnonymous;
+  final bool _isAnonymous;
 
   // !Most be static .
   static String? _displayName = 'Sita Bérété';

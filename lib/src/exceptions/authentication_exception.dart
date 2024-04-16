@@ -1,11 +1,8 @@
-
-
 class AuthenticationException implements Exception {
-  final AuthenticationExceptionType exceptionType;
-  final String message;
-
-  const AuthenticationException(
-      {required this.exceptionType, required this.message});
+  const AuthenticationException({
+    required this.exceptionType,
+    required this.message,
+  });
 
   const AuthenticationException.unknown()
       : this(
@@ -44,7 +41,7 @@ class AuthenticationException implements Exception {
       : this(
           exceptionType: AuthenticationExceptionType.userDisabled,
           message:
-              'Votre compte a été temporairement désactivé, si vous ne connaissez pas les raisons pour lesquelles votre compte a été désactivé veuillez nous contacter (taluxi.gn@gmail.com) pour plus d\'informations.',
+              "Votre compte a été temporairement désactivé, si vous ne connaissez pas les raisons pour lesquelles votre compte a été désactivé veuillez nous contacter (taluxi.gn@gmail.com) pour plus d'informations.",
         );
 
   const AuthenticationException.userNotFound()
@@ -84,8 +81,11 @@ class AuthenticationException implements Exception {
 
   const AuthenticationException.tooManyRequests()
       : this(
-            exceptionType: AuthenticationExceptionType.tooManyRequests,
-            message: 'Trop de tentative, veuillez réessayer plus tard.');
+          exceptionType: AuthenticationExceptionType.tooManyRequests,
+          message: 'Trop de tentative, veuillez réessayer plus tard.',
+        );
+  final AuthenticationExceptionType exceptionType;
+  final String message;
 }
 
 enum AuthenticationExceptionType {

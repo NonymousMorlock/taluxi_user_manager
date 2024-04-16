@@ -86,7 +86,7 @@ void main() {
       '2020-12-01': 23,
       '2020-12-03': 17,
       '2012-12-30': 0,
-      '2017-12-29': 04
+      '2017-12-29': 04,
     };
 
     setUp(() {
@@ -101,9 +101,9 @@ void main() {
     final now = DateTime.now();
     final todayHistoryKey = generateKeyFromDateTime(now);
     final yesterdayHistoryKey =
-        generateKeyFromDateTime(now.subtract(Duration(days: 1)));
+        generateKeyFromDateTime(now.subtract(const Duration(days: 1)));
     final beforeYesterdayHistoryKey =
-        generateKeyFromDateTime(now.subtract(Duration(days: 2)));
+        generateKeyFromDateTime(now.subtract(const Duration(days: 2)));
     void initHistoryWithThe3LastDaysKeys() {
       MockSharedPreferences
           .data[FirebaseUserDataRepository.rideCountHistoryKey] = json.encode({
@@ -137,8 +137,10 @@ void main() {
       initUser();
       // Wait for end of user Initialization
       await Future.delayed(Duration.zero);
-      expect(user.rideCountHistory?.keys,
-          containsAll(['Aujourd\'hui', 'Hier', 'Avant-hier']));
+      expect(
+        user.rideCountHistory?.keys,
+        containsAll(["Aujourd'hui", 'Hier', 'Avant-hier']),
+      );
     });
 
     test(
@@ -156,8 +158,10 @@ void main() {
     test('Should  replace key with user friendly key without changing value',
         () async {
       initHistoryWithThe3LastDaysKeys();
-      final initialHistory = json.decode(MockSharedPreferences
-          .data[FirebaseUserDataRepository.rideCountHistoryKey]);
+      final initialHistory = json.decode(
+        MockSharedPreferences
+            .data[FirebaseUserDataRepository.rideCountHistoryKey],
+      );
       initUser();
       // Wait for end of user Initialization.
       await Future.delayed(Duration.zero);

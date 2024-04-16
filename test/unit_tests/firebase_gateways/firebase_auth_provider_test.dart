@@ -1,15 +1,14 @@
-
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+import 'package:user_manager/src/authentication_provider.dart';
 import 'package:user_manager/src/entities/user.dart';
 import 'package:user_manager/src/exceptions/authentication_exception.dart';
 import 'package:user_manager/src/firebase_gateways/firebase_auth_provider.dart';
 import 'package:user_manager/src/firebase_gateways/firebase_user_data_repository.dart';
 import 'package:user_manager/src/repositories/user_data_repository.dart';
-import 'package:user_manager/src/authentication_provider.dart';
 
 import '../mocks/mock_firebase_auth.dart';
 import '../mocks/mock_shared_preferences.dart';
@@ -24,15 +23,16 @@ void main() {
     MockSharedPreferences.enabled = true;
     mockFirebaseAuth = MockFirebaseAuth();
     final firebaseFirestore = FakeFirebaseFirestore();
-    final userAdditionalDataCollection = await firebaseFirestore
+    final userAdditionalDataCollection = firebaseFirestore
         .collection(FirebaseUserDataRepository.usersAdditionalDataKey);
     await userAdditionalDataCollection
         .doc('aabbcc')
         .set(FirebaseUserDataRepository.initialAdditionalData);
 
     userDataRepository = FirebaseUserDataRepository.forTest(
-        firestoreDatabase: firebaseFirestore,
-        sharedPreferences: MockSharedPreferences());
+      firestoreDatabase: firebaseFirestore,
+      sharedPreferences: MockSharedPreferences(),
+    );
     firebaseAuthProvider =
         FirebaseAuthProvider.forTest(userDataRepository, mockFirebaseAuth);
   });
@@ -43,14 +43,18 @@ void main() {
 
     test('Signin with email and password', () async {
       await firebaseAuthProvider.signInWithEmailAndPassword(
-          email: 'test@tes.te', password: 'password');
+        email: 'test@tes.te',
+        password: 'password',
+      );
       await Future.delayed(Duration.zero);
       expect(firebaseAuthProvider.user, isA<User>());
     });
 
     test('Sign out', () async {
       await firebaseAuthProvider.signInWithEmailAndPassword(
-          email: 'test@tes.te', password: 'password');
+        email: 'test@tes.te',
+        password: 'password',
+      );
       await Future.delayed(Duration.zero); // wait for next event loop
       expect(firebaseAuthProvider.user, isA<User>());
       await firebaseAuthProvider.signOut();
@@ -60,7 +64,7 @@ void main() {
     test(
         'FirebaseAuthProvider should notify its listeners when AuthState changes',
         () async {
-      var authStateLog = <AuthState>[];
+      final authStateLog = <AuthState>[];
       firebaseAuthProvider.addListener(() {
         authStateLog.add(firebaseAuthProvider.authState);
       });
@@ -95,7 +99,7 @@ void main() {
 
     test('FirebaseAuthProvider should notify its listeners while registration',
         () async {
-      var authStateLog = <AuthState>[];
+      final authStateLog = <AuthState>[];
       firebaseAuthProvider.addListener(() {
         authStateLog.add(firebaseAuthProvider.authState);
       });
@@ -112,7 +116,8 @@ void main() {
     test(
         'Once registered user profile should be updated with first and last name',
         () async {
-      const firstName = 'Updated', lastName = 'Profile';
+      const firstName = 'Updated';
+      const lastName = 'Profile';
       await firebaseAuthProvider.registerUser(
         firstName: firstName,
         lastName: lastName,
@@ -121,10 +126,12 @@ void main() {
       );
       await Future.delayed(Duration.zero); // wait for next event loop
       expect(
-          firebaseAuthProvider.user?.userName, equals('$firstName $lastName'));
+        firebaseAuthProvider.user?.userName,
+        equals('$firstName $lastName'),
+      );
     });
 
-    // TODO test Facebook sign in sign out.
+    // TODOtest Facebook sign in sign out.
     // test('Sign in with facebook login', () {
     //
     //
@@ -144,15 +151,21 @@ void main() {
     test('Should increment wrong password counter', () async {
       expect(firebaseAuthProvider.wrongPasswordCounter, isZero);
       expect(
-          () async => await firebaseAuthProvider.signInWithEmailAndPassword(
-              email: 'test@gjs.sg', password: 'password'),
-          throwsException);
+        () async => await firebaseAuthProvider.signInWithEmailAndPassword(
+          email: 'test@gjs.sg',
+          password: 'password',
+        ),
+        throwsException,
+      );
       expect(firebaseAuthProvider.wrongPasswordCounter, equals(1));
       // second time
       expect(
-          () async => await firebaseAuthProvider.signInWithEmailAndPassword(
-              email: 'test@gjs.sg', password: 'password'),
-          throwsException);
+        () async => await firebaseAuthProvider.signInWithEmailAndPassword(
+          email: 'test@gjs.sg',
+          password: 'password',
+        ),
+        throwsException,
+      );
       expect(firebaseAuthProvider.wrongPasswordCounter, equals(2));
     });
 
@@ -163,7 +176,9 @@ void main() {
       firebaseAuthProvider.wrongPasswordCounter = 4;
       expect(firebaseAuthProvider.wrongPasswordCounter, equals(4));
       await firebaseAuthProvider.signInWithEmailAndPassword(
-          email: '', password: '');
+        email: '',
+        password: '',
+      );
       expect(firebaseAuthProvider.user, isA<User>());
       expect(firebaseAuthProvider.wrongPasswordCounter, isZero);
     });
@@ -176,7 +191,9 @@ void main() {
       MockFirebaseAuth.signInMethds = ['facebook.com'];
       expect(
         () async => await firebaseAuthProvider.signInWithEmailAndPassword(
-            email: 'same', password: ''),
+          email: 'same',
+          password: '',
+        ),
         throwsA(
           isA<AuthenticationException>().having(
             (e) => e.exceptionType,
@@ -197,7 +214,9 @@ void main() {
       MockFirebaseAuth.signInMethds = ['password'];
       expect(
         () async => await firebaseAuthProvider.signInWithEmailAndPassword(
-            email: 'same', password: ''),
+          email: 'same',
+          password: '',
+        ),
         throwsA(
           isA<AuthenticationException>().having(
             (e) => e.message,

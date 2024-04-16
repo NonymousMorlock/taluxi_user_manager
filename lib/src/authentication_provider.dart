@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
-
-import 'entities/user.dart';
-import 'firebase_gateways/firebase_auth_provider.dart';
+import 'package:user_manager/src/firebase_gateways/firebase_auth_provider.dart';
+import 'package:user_manager/user_manager.dart';
 
 /// {@template auth_provider}
 /// An authentication APIs provider (Sign in, Sign out, register, reset password...)
@@ -40,8 +39,10 @@ abstract class AuthenticationProvider with ChangeNotifier {
   /// - `AuthenticationExceptionType.unknown`
   ///  - Thrown if an unidentified error occurred such as server side error
   ///    or Dart exception.
-  Future<void> signInWithEmailAndPassword(
-      {required String email, required String password});
+  Future<void> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  });
 
   /// Tries to create a new user account with the given email address and
   /// password.

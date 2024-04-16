@@ -2,11 +2,11 @@ import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockSharedPreferences extends Mock implements SharedPreferences {
-  static var data = <String, dynamic>{};
-  static var enabled = false;
-  static var throwException = false;
-  static var writingDataMustFail = false;
-  static var thrownExceptionCount = 0;
+  static Map<String, dynamic> data = <String, dynamic>{};
+  static bool enabled = false;
+  static bool throwException = false;
+  static bool writingDataMustFail = false;
+  static int thrownExceptionCount = 0;
 
   @override
   Future<bool> clear() {
