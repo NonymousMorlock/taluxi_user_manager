@@ -30,6 +30,7 @@ class FirebaseAuthProvider
     _authStateStreamController.onListen =
         () => _authStateStreamController.sink.add(_currentAuthState);
   }
+
   late firebase_auth.FirebaseAuth _firebaseAuth;
   AuthState _currentAuthState = AuthState.uninitialized;
   final _authStateStreamController = StreamController<AuthState>.broadcast();
@@ -148,8 +149,9 @@ class FirebaseAuthProvider
         email: email,
         password: password,
       );
-      if (userCredential.user == null)
+      if (userCredential.user == null) {
         throw const AuthenticationException.unknown();
+      }
       await _userDataRepository.initAdditionalData(userCredential.user!.uid);
       await userCredential.user!.updateDisplayName('$firstName $lastName');
     } catch (e) {
@@ -186,13 +188,16 @@ class FirebaseAuthProvider
     notifyListeners();
   }
 
-  Future _handleException(dynamic exception, {bool facebook = false}) async {
+  Future<Exception> _handleException(
+    dynamic exception, {
+    bool facebook = false,
+  }) async {
     if (_firebaseAuth.currentUser == null) {
       _switchState(AuthState.unauthenticated);
     }
     if (exception is firebase_auth.FirebaseAuthException) {
-      print('\n\n------$exception-----\n\n');
-      return await _convertFirebaseAuthException(exception);
+      debugPrint('\n\n------$exception-----\n\n');
+      return _convertFirebaseAuthException(exception);
     }
     if (exception is UserDataAccessException) {
       return exception; // <==> rethrow
@@ -231,7 +236,7 @@ class FirebaseAuthProvider
           lastTryedEmail = exception.email;
         }
         if (++wrongPasswordCounter >= 3) {
-          return await _handleManyWrongPassword(exception);
+          return _handleManyWrongPassword(exception);
         }
         return const AuthenticationException.wrongPassword();
       case 'too-many-requests':
@@ -244,15 +249,18 @@ class FirebaseAuthProvider
   Future<AuthenticationException> _handleManyWrongPassword(
     firebase_auth.FirebaseAuthException exception,
   ) async {
-    // If the wrong password counter exceeds a certain limit, return a generic error
+    // If the wrong password counter exceeds a certain limit, return a
+    // generic error
     if (++wrongPasswordCounter >= 3) {
       return const AuthenticationException(
         exceptionType: AuthenticationExceptionType.wrongPassword,
         message:
-            'Failed login attempts exceeded. If you forgot your password, please use the "Forgot Password" option.',
+            'Failed login attempts exceeded. If you forgot your password, '
+                'please use the "Forgot Password" option.',
       );
     }
-    // If the wrong password counter is less than the limit, return the wrong password error
+    // If the wrong password counter is less than the limit,
+    // return the wrong password error
     return const AuthenticationException.wrongPassword();
   }
 }

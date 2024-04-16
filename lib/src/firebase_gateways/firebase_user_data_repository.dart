@@ -78,7 +78,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
     final userAdditionalData =
         _sharedPreferences.getString(usersAdditionalDataKey);
     if (userAdditionalData == null) return null;
-    return json.decode(userAdditionalData);
+    return json.decode(userAdditionalData) as Map<String, dynamic>;
   }
 
   Future<void> _updateCacheData(Map<String, dynamic> data) async {
