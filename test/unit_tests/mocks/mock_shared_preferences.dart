@@ -31,8 +31,8 @@ class MockSharedPreferences extends Mock implements SharedPreferences {
   int getInt(String key) => get(key) as int;
 
   @override
-  Future<bool> setString(String key, String value) {
-    if (!enabled) return null;
+  Future<bool> setString(String key, String value) async {
+    if (!enabled) return false;
     if (throwException) {
       thrownExceptionCount++;
       throw Exception();
@@ -42,8 +42,8 @@ class MockSharedPreferences extends Mock implements SharedPreferences {
   }
 
   @override
-  Future<bool> setInt(String key, int value) {
-    if (!enabled) return null;
+  Future<bool> setInt(String key, int value) async {
+    if (!enabled) return false;
     if (throwException) {
       thrownExceptionCount++;
       throw Exception();

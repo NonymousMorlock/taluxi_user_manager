@@ -11,7 +11,7 @@ abstract class AuthenticationProvider with ChangeNotifier {
   AuthState get authState;
 
   /// The [user]
-  User get user;
+  User? get user;
 
   /// Return a binary state of authentication which can be wether
   /// [AuthState.authenticated] or [AuthState.unauthenticated].
@@ -41,7 +41,7 @@ abstract class AuthenticationProvider with ChangeNotifier {
   ///  - Thrown if an unidentified error occurred such as server side error
   ///    or Dart exception.
   Future<void> signInWithEmailAndPassword(
-      {@required String email, @required String password});
+      {required String email, required String password});
 
   /// Tries to create a new user account with the given email address and
   /// password.
@@ -55,10 +55,10 @@ abstract class AuthenticationProvider with ChangeNotifier {
   /// - `AuthenticationException.userNotFound`:
   ///  - Thrown if the password is not strong enough.
   Future<void> registerUser({
-    @required String firstName,
-    @required String lastName,
-    @required String email,
-    @required String password,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
   });
 
   /// Triggers the Authentication backend (in the current case the Firebase

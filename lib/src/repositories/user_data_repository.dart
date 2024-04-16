@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+
 import '../firebase_gateways/firebase_user_data_repository.dart';
 
 abstract class UserDataRepository {
@@ -9,15 +10,17 @@ abstract class UserDataRepository {
   Future<Map<String, dynamic>> getAdditionalData(String userUid);
 
   /// Updates the user additional [data] such as ride count, trophies...
-  Future<void> updateAdditionalData(
-      {@required Map<String, dynamic> data, @required String userUid});
+  Future<void> updateAdditionalData({
+    required Map<String, dynamic> data,
+    required String userUid,
+  });
 
   /// Initializes the user additionale data .
   Future<void> initAdditionalData(String userUid);
 
   String getTheRecentlyWonTrophies(String userTrophies);
 
-  Future<void> incrmentRideCount(String userId);
+  Future<void> incrementRideCount(String userId);
 
   Map<String, dynamic> getRideCountHistory();
 
@@ -34,11 +37,12 @@ abstract class UserDataRepository {
   //   'H': '1000+ trajets depuis votre inscription'
   // };
 
-  static const trophiesList = {
+  static final trophiesList = {
     'A': _TrophyModel(
       minRideCount: 5,
       name: '5 trajets depuis votre inscription',
-      timeLimit: null,
+      timeLimit:
+          DateTime.now().add(Duration(days: 1)).difference(DateTime.now()),
     ),
     'B': _TrophyModel(
       minRideCount: 3,
@@ -71,7 +75,7 @@ abstract class UserDataRepository {
       name: '70 trajets en une semaine',
     ),
     'H': _TrophyModel(
-      timeLimit: null,
+      timeLimit: Duration(days: 365),
       minRideCount: 600,
       name: '600 trajets depuis votre inscription',
     )
@@ -84,8 +88,10 @@ class _TrophyModel {
   final int minRideCount;
   final String name;
   final Duration timeLimit;
-  const _TrophyModel(
-      {@required this.minRideCount,
-      @required this.timeLimit,
-      @required this.name});
+
+  const _TrophyModel({
+    required this.minRideCount,
+    required this.timeLimit,
+    required this.name,
+  });
 }

@@ -1,10 +1,11 @@
-import 'package:meta/meta.dart';
+
 
 class AuthenticationException implements Exception {
   final AuthenticationExceptionType exceptionType;
   final String message;
+
   const AuthenticationException(
-      {@required this.exceptionType, @required this.message});
+      {required this.exceptionType, required this.message});
 
   const AuthenticationException.unknown()
       : this(
@@ -80,6 +81,7 @@ class AuthenticationException implements Exception {
           message:
               "La connexion à l'aide de votre compte facebook à échouer, veuillez réessayer. Si on vous affiche une page de connexion facebook, connectez vous de la même façon dont vous avez l'habitude de le faire pour vous connecter à votre compte facebook.",
         );
+
   const AuthenticationException.tooManyRequests()
       : this(
             exceptionType: AuthenticationExceptionType.tooManyRequests,

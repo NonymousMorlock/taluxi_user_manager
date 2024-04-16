@@ -3,15 +3,16 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/helpers.dart';
+
 import '../exceptions/user_data_access_exception.dart';
 import '../repositories/user_data_repository.dart';
+import '../utils/helpers.dart';
 
 // TODO refactor : new classes (CacheDataManager).
 class FirebaseUserDataRepository implements UserDataRepository {
-  SharedPreferences _sharedPreferences;
-  CollectionReference _additionalDataReference;
-  final FirebaseFirestore _firebaseFirestore;
+  late SharedPreferences _sharedPreferences;
+  late CollectionReference _additionalDataReference;
+  late final FirebaseFirestore _firebaseFirestore;
   static const trophiesKey = 't';
   static const totalRideCountKey = 'r';
   static const initialAdditionalData = {
@@ -36,15 +37,10 @@ class FirebaseUserDataRepository implements UserDataRepository {
 
   @visibleForTesting
   FirebaseUserDataRepository.forTest({
-    @required FirebaseFirestore firestoreDatabase,
-    @required SharedPreferences sharedPreferences,
-  }) : _firebaseFirestore = firestoreDatabase ?? FirebaseFirestore.instance {
-    if (sharedPreferences == null) {
-      SharedPreferences.getInstance()
-          .then((value) => _sharedPreferences = value);
-    } else {
-      _sharedPreferences = sharedPreferences;
-    }
+    required FirebaseFirestore firestoreDatabase,
+    required SharedPreferences sharedPreferences,
+  })  : _firebaseFirestore = firestoreDatabase,
+        _sharedPreferences = sharedPreferences {
     _setupFirestore();
   }
 
@@ -58,20 +54,31 @@ class FirebaseUserDataRepository implements UserDataRepository {
   Future<Map<String, dynamic>> getAdditionalData(String userUid) async {
     try {
       // ! Cache data access error should not affect the program execution
-      final cachedData = await _getCahedData().catchError((_) => null);
+      Map<String, dynamic>? cachedData;
+      try {
+        cachedData = await _getCachedData();
+      } catch (_) {
+        cachedData = null;
+      }
       if (cachedData != null) return cachedData;
-      final document = await _additionalDataReference.doc(userUid).get();
+      final document = (await _additionalDataReference.doc(userUid).get())
+          as DocumentSnapshot<Map<String, dynamic>>;
       final documentData = document.data();
-      await _updateCacheData(documentData).catchError((_) => null);
-      return documentData;
+
+      if (documentData != null) {
+        await _updateCacheData(documentData).catchError((_) => null);
+        return documentData;
+      }
+      throw UserDataAccessException.unknown();
     } on FirebaseException {
       throw UserDataAccessException.unknown();
     }
   }
 
-  Future<Map<String, dynamic>> _getCahedData() async {
+  Future<Map<String, dynamic>?> _getCachedData() async {
     final userAdditionalData =
         _sharedPreferences.getString(usersAdditionalDataKey);
+    if (userAdditionalData == null) return null;
     return json.decode(userAdditionalData);
   }
 
@@ -79,7 +86,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
     final dataJson = json.encode(data);
     final dataIsSuccessfullySet =
         await _sharedPreferences.setString(usersAdditionalDataKey, dataJson);
-    if (!(dataIsSuccessfullySet ?? false)) {
+    if (!dataIsSuccessfullySet) {
       // delete local data if it is not up to date, and retry if its fail.
       if (!(await _sharedPreferences.clear())) await _sharedPreferences.clear();
     }
@@ -97,8 +104,8 @@ class FirebaseUserDataRepository implements UserDataRepository {
 
   @override
   Future<void> updateAdditionalData({
-    @required Map<String, dynamic> data,
-    @required String userUid,
+    required Map<String, dynamic> data,
+    required String userUid,
   }) async {
     try {
       await _updateCacheData(data).catchError((_) => null);
@@ -109,7 +116,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
   }
 
   @override
-  Future<void> incrmentRideCount(String userId) async {
+  Future<void> incrementRideCount(String userId) async {
     try {
       var additionalData = await getAdditionalData(userId);
       additionalData[totalRideCountKey]++;
@@ -123,9 +130,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
   @visibleForTesting
   Future<void> incrementTodaysRideCount() async {
     final todaysRideCountKey = generateKeyFromDateTime(DateTime.now());
-    final rideCountHistoryJson =
-        _sharedPreferences.getString(rideCountHistoryKey);
-    final rideCountHistory = json.decode(rideCountHistoryJson);
+    final rideCountHistory = getRideCountHistory();
     var todaysRideCount = rideCountHistory[todaysRideCountKey];
     todaysRideCount = (todaysRideCount ?? 0) + 1;
     rideCountHistory[todaysRideCountKey] = todaysRideCount;
@@ -138,7 +143,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
 
   @override
   Map<String, dynamic> getRideCountHistory() {
-    // TODO: make surpport return type [Map<String, int>]
+    // TODO: make support return type [Map<String, int>]
     return json.decode(
       _sharedPreferences.getString(rideCountHistoryKey) ??
           _initializeRideCountHistory(),
@@ -171,7 +176,7 @@ class FirebaseUserDataRepository implements UserDataRepository {
     try {
       UserDataRepository.trophiesList.forEach((trophyLevel, trophy) async {
         userRideCountSinceXDays =
-            userRideCountFromFewDaysToToday(trophy.timeLimit?.inDays);
+            userRideCountFromFewDaysToToday(trophy.timeLimit.inDays);
         if (!userTrophies.contains(trophyLevel) &&
             userRideCountSinceXDays >= trophy.minRideCount) {
           trophiesWon += trophyLevel;
@@ -184,27 +189,31 @@ class FirebaseUserDataRepository implements UserDataRepository {
   }
 
   @visibleForTesting
-  int userRideCountFromFewDaysToToday(int numberOfDays) {
+  int userRideCountFromFewDaysToToday(int? numberOfDays) {
     if (numberOfDays == null) {
-      return _sharedPreferences.getInt(totalRideCountKey);
+      return _sharedPreferences.getInt(totalRideCountKey) ?? 0;
     }
     var rideCountSinceXDays = 0;
     final todaysDate = DateTime.now();
-    final rideCountHistoryJson =
-        _sharedPreferences.getString(rideCountHistoryKey);
-    final rideCountHistory = json.decode(rideCountHistoryJson);
+    // final rideCountHistoryJson =
+    //     _sharedPreferences.getString(rideCountHistoryKey);
+    // final rideCountHistory = json.decode(rideCountHistoryJson);
+    final rideCountHistory = getRideCountHistory();
     var currentHistoryDate;
     var currentHistoryKey;
-    while (numberOfDays-- > 0) {
-      currentHistoryDate = todaysDate.subtract(Duration(days: numberOfDays));
+    int nonNullNumberOfDays = numberOfDays;
+    while (nonNullNumberOfDays-- > 0) {
+      currentHistoryDate =
+          todaysDate.subtract(Duration(days: nonNullNumberOfDays));
       currentHistoryKey = generateKeyFromDateTime(currentHistoryDate);
-      rideCountSinceXDays += rideCountHistory[currentHistoryKey] ?? 0;
+      rideCountSinceXDays +=
+          (rideCountHistory[currentHistoryKey] as num?)?.toInt() ?? 0;
     }
     return rideCountSinceXDays;
   }
 
-  // @override
-  // Future<void> setReview({@required String userId, @required String review}) {
-  //   _additionalDataReference.doc('$userId/$reviewsKey').
-  // }
+// @override
+// Future<void> setReview({@required String userId, @required String review}) {
+//   _additionalDataReference.doc('$userId/$reviewsKey').
+// }
 }

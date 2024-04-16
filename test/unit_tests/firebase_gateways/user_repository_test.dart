@@ -1,20 +1,19 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_firestore_mocks/cloud_firestore_mocks.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 import 'package:user_manager/src/firebase_gateways/firebase_user_data_repository.dart';
-import 'package:user_manager/src/repositories/user_data_repository.dart';
 import 'package:user_manager/src/utils/helpers.dart';
 
 import '../mocks/mock_shared_preferences.dart';
 
 void main() {
-  FirebaseFirestore firebaseFirestore;
-  UserDataRepository userDataRepository;
-  SharedPreferences sharedPreferences;
-  CollectionReference userAdditionalDataCollection;
+  late FirebaseFirestore firebaseFirestore;
+  late FirebaseUserDataRepository userDataRepository;
+  late SharedPreferences sharedPreferences;
+  late CollectionReference userAdditionalDataCollection;
   const userUid = 'testUid';
   const otherUserUid = 'testNewUid';
   const userAdditionalData = {
@@ -23,7 +22,7 @@ void main() {
   };
   setUp(() async {
     sharedPreferences = MockSharedPreferences();
-    firebaseFirestore = MockFirestoreInstance();
+    firebaseFirestore = FakeFirebaseFirestore();
     userDataRepository = FirebaseUserDataRepository.forTest(
         firestoreDatabase: firebaseFirestore,
         sharedPreferences: sharedPreferences);
@@ -89,7 +88,7 @@ void main() {
   });
 
 /******************************************************************************/
-/****************************** [ New Group ] *********************************/
+  /****************************** [ New Group ] *********************************/
 /******************************************************************************/
 
   group('Cache data (SharedPreferences) :', () {
@@ -205,7 +204,7 @@ void main() {
   });
 
 /******************************************************************************/
-/****************************** [ New Group ] *********************************/
+  /****************************** [ New Group ] *********************************/
 /******************************************************************************/
 
   group('Trophies and ride count history management :', () {
@@ -213,7 +212,7 @@ void main() {
     //! by the [UserDataRepository] class so we need to make a copy of original
     //! userDataRepository initialized in the global [setUp] function and cast it to
     //! [FirebaseUserDataRepository] which expose needed methods publicly for tests.
-    FirebaseUserDataRepository userDataRepository2;
+    late FirebaseUserDataRepository userDataRepository2;
     Map<String, dynamic> rideCountHistory() => jsonDecode(MockSharedPreferences
         .data[FirebaseUserDataRepository.rideCountHistoryKey]);
     String dateOfXDaysAgo(int daysAgo) {
@@ -250,7 +249,7 @@ void main() {
     });
 
     test('Should increment ride count', () async {
-      await userDataRepository.incrmentRideCount(userUid);
+      await userDataRepository.incrementRideCount(userUid);
       final additionalData =
           await userDataRepository.getAdditionalData(userUid);
       expect(

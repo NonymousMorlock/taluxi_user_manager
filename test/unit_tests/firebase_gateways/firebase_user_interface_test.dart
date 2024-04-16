@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore_mocks/cloud_firestore_mocks.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
@@ -19,13 +19,13 @@ class MockFirebaseUser extends Mock implements User {
 }
 
 void main() {
-  FirebaseUserDataRepository userDataRepository;
-  FirebaseUserInterface user;
+  late FirebaseUserDataRepository userDataRepository;
+  late FirebaseUserInterface user;
   //! in some case [user] most be initialized manualy by colling [initUser]
   //! because some initialization is done in the [FirebaseUserInterface] constructor.
   void initUser() {
     userDataRepository = FirebaseUserDataRepository.forTest(
-      firestoreDatabase: MockFirestoreInstance(),
+      firestoreDatabase: FakeFirebaseFirestore(),
       sharedPreferences: MockSharedPreferences(),
     );
     user = FirebaseUserInterface(
@@ -74,7 +74,7 @@ void main() {
       expect(user.rideCount, equals('Erreur'));
       expect(user.trophies, equals('Erreur'));
       expect(user.rideCount, equals('Erreur'));
-      expect(user.rideCountHistory.keys, contains('Erreur'));
+      expect(user.rideCountHistory?.keys, contains('Erreur'));
     });
   });
 
@@ -117,7 +117,7 @@ void main() {
       initUser();
       // Wait for end of user Initialization.
       await Future.delayed(Duration.zero);
-      expect(user.rideCountHistory.keys, containsAll(fakeInitialHistory.keys));
+      expect(user.rideCountHistory?.keys, containsAll(fakeInitialHistory.keys));
     });
 
     test(
@@ -129,15 +129,15 @@ void main() {
       await Future.delayed(Duration.zero);
       //! [user.rideCountHistory] also contains 'Hier' and 'Avant-hier' keys
       //! which is initialized in the [FirebaseUserInterface] class.
-      expect(user.rideCountHistory.keys, contains("Aujourd'hui"));
-      expect(user.rideCountHistory.values, contains(0));
+      expect(user.rideCountHistory?.keys, contains("Aujourd'hui"));
+      expect(user.rideCountHistory?.values, contains(0));
     });
 
     test('Should get ride count hisotry with user friendly keys', () async {
       initUser();
       // Wait for end of user Initialization
       await Future.delayed(Duration.zero);
-      expect(user.rideCountHistory.keys,
+      expect(user.rideCountHistory?.keys,
           containsAll(['Aujourd\'hui', 'Hier', 'Avant-hier']));
     });
 
@@ -148,9 +148,9 @@ void main() {
       initUser();
       // Wait for end of user Initialization
       await Future.delayed(Duration.zero);
-      expect(user.rideCountHistory["Aujourd'hui"], equals(0));
-      expect(user.rideCountHistory['Hier'], equals(0));
-      expect(user.rideCountHistory['Avant-hier'], equals(0));
+      expect(user.rideCountHistory?["Aujourd'hui"], equals(0));
+      expect(user.rideCountHistory?['Hier'], equals(0));
+      expect(user.rideCountHistory?['Avant-hier'], equals(0));
     });
 
     test('Should  replace key with user friendly key without changing value',
@@ -162,16 +162,16 @@ void main() {
       // Wait for end of user Initialization.
       await Future.delayed(Duration.zero);
       expect(
-        user.rideCountHistory["Aujourd'hui"],
+        user.rideCountHistory?["Aujourd'hui"],
         equals(initialHistory[todayHistoryKey]),
       );
       expect(
-        user.rideCountHistory['Hier'],
+        user.rideCountHistory?['Hier'],
         equals(initialHistory[yesterdayHistoryKey]),
       );
 
       expect(
-        user.rideCountHistory['Avant-hier'],
+        user.rideCountHistory?['Avant-hier'],
         equals(initialHistory[beforeYesterdayHistoryKey]),
       );
     });

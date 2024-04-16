@@ -1,25 +1,29 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 
 // TODO Complete mocks.
 class MockFirebaseAuth extends Mock implements FirebaseAuth {
   final stateChangedStreamController = StreamController<User>();
-  static User _currentUser;
+  static User? _currentUser;
   static bool mustThrowsException = false;
   static String errorCode = '';
   static var signInMethds = <String>[];
 
   MockFirebaseAuth({signedIn = false}) {
     if (signedIn) {
-      signInWithCredential(null);
+      signInWithCredential(
+        AuthCredential(
+          providerId: 'providerId',
+          signInMethod: 'signInMethod',
+        ),
+      );
     }
   }
 
   @override
-  User get currentUser {
+  User? get currentUser {
     return _currentUser;
   }
 
@@ -34,16 +38,16 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {
 
   @override
   Future<UserCredential> createUserWithEmailAndPassword({
-    String email,
-    String password,
+    required String email,
+    required String password,
   }) {
     return _fakeSignIn();
   }
 
   @override
   Future<UserCredential> signInWithEmailAndPassword({
-    @required String email,
-    @required String password,
+    required String email,
+    required String password,
   }) {
     return _fakeSignIn();
   }
@@ -61,7 +65,7 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {
   @override
   Future<void> signOut() async {
     _currentUser = null;
-    stateChangedStreamController.add(null);
+    stateChangedStreamController.add(_currentUser!);
   }
 
   Future<UserCredential> _fakeSignIn({bool isAnonymous = false}) {
@@ -70,7 +74,7 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {
     }
     final userCredential = MockUserCredential(isAnonymous: isAnonymous);
     _currentUser = userCredential.user;
-    stateChangedStreamController.add(_currentUser);
+    stateChangedStreamController.add(_currentUser!);
     return Future.value(userCredential);
   }
 
@@ -81,7 +85,7 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {
 class MockUserCredential extends Mock implements UserCredential {
   final bool _isAnonymous;
 
-  MockUserCredential({bool isAnonymous}) : _isAnonymous = isAnonymous;
+  MockUserCredential({required bool isAnonymous}) : _isAnonymous = isAnonymous;
 
   @override
   User get user => MockUser(isAnonymous: _isAnonymous);
@@ -90,12 +94,17 @@ class MockUserCredential extends Mock implements UserCredential {
 class MockUser extends Mock implements User {
   final bool _isAnonymous;
 
-  MockUser({bool isAnonymous}) : _isAnonymous = isAnonymous;
+  MockUser({required bool isAnonymous}) : _isAnonymous = isAnonymous;
+
   // !Most be static .
-  static String _displayName = 'Sita Bérété';
+  static String? _displayName = 'Sita Bérété';
   static String _photoURL = 'url-to-photo.jpg';
+
   @override
-  Future<void> updateProfile({String displayName, String photoURL}) async {
+  Future<void> updateProfile({
+    String? displayName,
+    String? photoURL,
+  }) async {
     _displayName = displayName;
     _photoURL = photoURL ?? _photoURL;
   }
@@ -106,7 +115,7 @@ class MockUser extends Mock implements User {
   }
 
   @override
-  String get displayName => _displayName;
+  String? get displayName => _displayName;
 
   @override
   String get uid => 'aabbcc';

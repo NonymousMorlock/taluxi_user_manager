@@ -1,28 +1,29 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import '../exceptions/user_data_access_exception.dart';
-import '../exceptions/authentication_exception.dart';
+
 import '../authentication_provider.dart';
-import '../repositories/user_data_repository.dart';
 import '../entities/user.dart';
+import '../exceptions/authentication_exception.dart';
+import '../exceptions/user_data_access_exception.dart';
+import '../repositories/user_data_repository.dart';
 import 'firebase_user_interface.dart';
 
 class FirebaseAuthProvider
     with ChangeNotifier
     implements AuthenticationProvider {
-  firebase_auth.FirebaseAuth _firebaseAuth;
+  late firebase_auth.FirebaseAuth _firebaseAuth;
   AuthState _currentAuthState = AuthState.uninitialized;
   final _authStateStreamController = StreamController<AuthState>.broadcast();
-  final UserDataRepository _userDataRepository;
-  User _user;
+  late final UserDataRepository _userDataRepository;
+  User? _user;
   static final _singleton = FirebaseAuthProvider._internal();
   @visibleForTesting
   var wrongPasswordCounter = 0;
   @visibleForTesting
-  String lastTryedEmail;
+  String? lastTryedEmail;
 
   factory FirebaseAuthProvider() => _singleton;
 
@@ -36,8 +37,7 @@ class FirebaseAuthProvider
   }
 
   @visibleForTesting
-  FirebaseAuthProvider.forTest(this._userDataRepository, this._firebaseAuth)
-      : assert(_userDataRepository != null && _firebaseAuth != null) {
+  FirebaseAuthProvider.forTest(this._userDataRepository, this._firebaseAuth) {
     _firebaseAuth.authStateChanges().listen(_onAuthStateChanged);
     _authStateStreamController.onListen =
         () => _authStateStreamController.sink.add(_currentAuthState);
@@ -45,8 +45,10 @@ class FirebaseAuthProvider
 
   @override
   AuthState get authState => _currentAuthState;
+
   @override
-  User get user => _user;
+  User? get user => _user;
+
   @override
   Stream<AuthState> get authBinaryState => _authStateStreamController.stream;
 
@@ -56,7 +58,7 @@ class FirebaseAuthProvider
     super.dispose();
   }
 
-  Future<void> _onAuthStateChanged(firebase_auth.User firebaseUser) async {
+  Future<void> _onAuthStateChanged(firebase_auth.User? firebaseUser) async {
     // TODO: refactoring
     try {
       if (firebaseUser == null) {
@@ -69,7 +71,7 @@ class FirebaseAuthProvider
           firebaseUser = _firebaseAuth.currentUser;
         }
         _user = FirebaseUserInterface(
-          firebaseUser: firebaseUser,
+          firebaseUser: firebaseUser!,
           userDataRepository: _userDataRepository,
         );
         _switchState(AuthState.authenticated);
@@ -89,25 +91,32 @@ class FirebaseAuthProvider
     try {
       // TODO test signInWithFacebook
       _switchState(AuthState.authenticating);
-      final facebookLoginAccessToken = await FacebookAuth.instance
-          .login(loginBehavior: LoginBehavior.DIALOG_ONLY);
-      final facebookOAuthCredential =
-          firebase_auth.FacebookAuthProvider.credential(
-              facebookLoginAccessToken.token);
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(facebookOAuthCredential);
-      if (userCredential.additionalUserInfo.isNewUser) {
-        await _userDataRepository.initAdditionalData(userCredential.user.uid);
+      final result = await FacebookAuth.instance.login(
+        loginBehavior: defaultTargetPlatform == TargetPlatform.android
+            ? LoginBehavior.dialogOnly
+            : LoginBehavior.nativeWithFallback,
+      );
+      if (result.status == LoginStatus.success) {
+        final facebookOAuthCredential =
+            firebase_auth.FacebookAuthProvider.credential(
+          result.accessToken!.token,
+        );
+        final userCredential =
+            await _firebaseAuth.signInWithCredential(facebookOAuthCredential);
+        if (userCredential.additionalUserInfo!.isNewUser) {
+          await _userDataRepository
+              .initAdditionalData(userCredential.user!.uid);
+        }
       }
     } catch (e) {
-      throw await _handleException(e);
+      throw await _handleException(e, facebook: true);
     }
   }
 
   @override
   Future<void> signInWithEmailAndPassword({
-    @required String email,
-    @required String password,
+    required String email,
+    required String password,
   }) async {
     try {
       _switchState(AuthState.authenticating);
@@ -128,18 +137,20 @@ class FirebaseAuthProvider
 
   @override
   Future<void> registerUser({
-    @required String firstName,
-    @required String lastName,
-    @required String email,
-    @required String password,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
   }) async {
     try {
       _switchState(AuthState.registering);
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-          email: email, password: password);
-      await _userDataRepository.initAdditionalData(userCredential.user.uid);
-      await userCredential.user
-          .updateProfile(displayName: '$firstName $lastName');
+        email: email,
+        password: password,
+      );
+      if (userCredential.user == null) throw AuthenticationException.unknown();
+      await _userDataRepository.initAdditionalData(userCredential.user!.uid);
+      await userCredential.user!.updateDisplayName('$firstName $lastName');
     } catch (e) {
       throw await _handleException(e);
     }
@@ -174,7 +185,7 @@ class FirebaseAuthProvider
     notifyListeners();
   }
 
-  Future _handleException(dynamic exception) async {
+  Future _handleException(dynamic exception, {bool facebook = false}) async {
     if (_firebaseAuth.currentUser == null) {
       _switchState(AuthState.unauthenticated);
     }
@@ -185,7 +196,7 @@ class FirebaseAuthProvider
     if (exception is UserDataAccessException) {
       return exception; // <==> rethrow
     }
-    if (exception is FacebookAuthException) {
+    if (facebook) {
       return const AuthenticationException.facebookLoginFailed();
     }
     // TODO: implement error rapport systéme.
@@ -229,26 +240,17 @@ class FirebaseAuthProvider
   }
 
   Future<AuthenticationException> _handleManyWrongPassword(
-    firebase_auth.FirebaseAuthException exception,
-  ) async {
-    final userSignInMethods = await _firebaseAuth
-        .fetchSignInMethodsForEmail(exception.email)
-        .catchError((_) => []);
-    if (userSignInMethods.first == 'facebook.com') {
-      return AuthenticationException(
-        exceptionType:
-            AuthenticationExceptionType.accountExistsWithDifferentCredential,
-        message:
-            "L'adresse email \"${exception.email}\" est déjà liée à un compte facebook que vous avez utilisé auparavant pour vous connecter. Veuillez appuyer sur le bouton ci-dessous pour vous connecter à l’aide de votre compte facebook.",
-      );
-    }
-    if (userSignInMethods.first == 'password') {
+      firebase_auth.FirebaseAuthException exception,
+      ) async {
+    // If the wrong password counter exceeds a certain limit, return a generic error
+    if (++wrongPasswordCounter >= 3) {
       return AuthenticationException(
         exceptionType: AuthenticationExceptionType.wrongPassword,
         message:
-            'Mot de passe incorrect. Vous avez tenté de vous connecter $wrongPasswordCounter fois avec la même adresse email sans succès, si vous avez oublié votre mot de passe veuillez appuyer sur ”Mot de passe oublié ?”  juste en dessous à droite du bouton “Valider” pour le récupérer.',
+        'Failed login attempts exceeded. If you forgot your password, please use the "Forgot Password" option.',
       );
     }
+    // If the wrong password counter is less than the limit, return the wrong password error
     return const AuthenticationException.wrongPassword();
   }
 }

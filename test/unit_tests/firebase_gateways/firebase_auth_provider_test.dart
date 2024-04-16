@@ -1,4 +1,5 @@
-import 'package:cloud_firestore_mocks/cloud_firestore_mocks.dart';
+
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:mockito/mockito.dart';
@@ -16,13 +17,13 @@ import '../mocks/mock_shared_preferences.dart';
 class MockFacebookAuth extends Mock implements FacebookAuth {}
 
 void main() {
-  FirebaseAuthProvider firebaseAuthProvider;
-  UserDataRepository userDataRepository;
-  firebase_auth.FirebaseAuth mockFirebaseAuth;
+  late FirebaseAuthProvider firebaseAuthProvider;
+  late UserDataRepository userDataRepository;
+  late firebase_auth.FirebaseAuth mockFirebaseAuth;
   setUp(() async {
     MockSharedPreferences.enabled = true;
     mockFirebaseAuth = MockFirebaseAuth();
-    final firebaseFirestore = MockFirestoreInstance();
+    final firebaseFirestore = FakeFirebaseFirestore();
     final userAdditionalDataCollection = await firebaseFirestore
         .collection(FirebaseUserDataRepository.usersAdditionalDataKey);
     await userAdditionalDataCollection
@@ -120,7 +121,7 @@ void main() {
       );
       await Future.delayed(Duration.zero); // wait for next event loop
       expect(
-          firebaseAuthProvider.user.userName, equals('$firstName $lastName'));
+          firebaseAuthProvider.user?.userName, equals('$firstName $lastName'));
     });
 
     // TODO test Facebook sign in sign out.
@@ -237,7 +238,7 @@ void main() {
     });
     methodsToTest.forEach((methodName, method) {
       final errorCodeMatcher = errorCodeMatcherForEachMethod[methodName];
-      errorCodeMatcher.keys.forEach((errorCode) {
+      errorCodeMatcher?.keys.forEach((errorCode) {
         test(
             '[$errorCode] to [AuthenticationException] with ExceptionType [${errorCodeMatcher[errorCode]}].',
             () {
